@@ -27,6 +27,11 @@ class DataHandler:
         return fig
 
 
+    def reposition_legend(self, fig):
+        fig.update_layout(legend={'yanchor': 'top', 'y': 0.99, 'xanchor': 'left', 'x': 0.01})
+        return fig
+
+
     def determine_timespan(self):
         wastewater_time_series = pd.to_datetime(self.interp_data['sample_date']).dt.date
         positivity_time_series = pd.to_datetime(self.positivity['DATE'])
@@ -116,15 +121,11 @@ app.layout = html.Div([
 
     html.Div(children=[
 
-        dcc.Graph(id='main_graph')
-
-    ]),
-
-    html.Div(children=[
-
+        dcc.Graph(id='main_graph'),
         dcc.Graph(id='positivity_graph')
 
-    ])
+    ], style={'display': 'flex', 'flex-direction': 'column'}),
+
 ])
 
 
@@ -140,6 +141,7 @@ def update_wastewater_fig(dropdown, interp, end_date, start_date):
     start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
 
     fig = data_handler.update_wastewater_fig(dropdown, interp, end_date, start_date)
+    fig = data_handler.reposition_legend(fig)
     return fig
 
 
