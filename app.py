@@ -28,7 +28,7 @@ class DataHandler:
 
 
     def determine_timespan(self):
-        wastewater_time_series = pd.to_datetime(self.interp_data['sample_date'])
+        wastewater_time_series = pd.to_datetime(self.interp_data['sample_date']).dt.date
         positivity_time_series = pd.to_datetime(self.positivity['DATE'])
 
         self.min_date = wastewater_time_series.min() if wastewater_time_series.min() > positivity_time_series.min() \
@@ -37,43 +37,43 @@ class DataHandler:
         self.max_date = wastewater_time_series.max() if wastewater_time_series.max() < positivity_time_series.max() \
                         else positivity_time_series.max()
 
-        for date in [self.min_date, self.max_date]:
-            date.strftime('%m/%d/%Y').replace(tzinfo=timezone.utc)
 
 
-    def update_fig(self, dropdown_selections, interp_selection, end_date, start_date):
+    def update_wastewater_fig(self, dropdown_selections, interp_selection, end_date, start_date):
         # interpolation selection
         starting_df = self.interp_data.copy() if interp_selection == 'On' else self.raw_data.copy()
-        starting_df['sample_date'] = pd.to_datetime(starting_df['sample_date'])
-
-        # end_date = datetime.strptime(end_date, '%m/%d/%Y').replace(tzinfo=timezone.utc)
-        # start_date = datetime.strptime(start_date, '%m/%d/%Y').replace(tzinfo=timezone.utc)
-
+        starting_df['sample_date'] = pd.to_datetime(starting_df['sample_date']).dt.date
 
         # timespan filter
-        starting_df = starting_df[(starting_df['sample_date'] >= start_date) &
-                                  (starting_df['sample_date'] <= end_date)]
+        starting_df = starting_df[(starting_df['sample_date'] >= start_date) & (starting_df['sample_date'] <= end_date)]
 
         # plant dropdown
         df = pd.DataFrame(columns=starting_df.columns)
         for dropdown in dropdown_selections:
             df = df.append(starting_df[starting_df['wrrf_name'] == dropdown])
 
-        fig = self.produce_fig(df, self.wastewater_fig_kwargs)
+        # figure kwargs
+        wastewater_fig_kwargs = {'x': 'sample_date',
+                                 'y': 'Per capita load (N1 copies per day per population)',
+                                 'color': 'wrrf_name'}
+
+        fig = self.produce_fig(df, wastewater_fig_kwargs)
         return fig
 
-    def update_positivity(self, end_date, start_date):
+
+    def update_positivity_fig(self, end_date, start_date):
         df = self.positivity.copy()
+        df['DATE'] = pd.to_datetime(df['DATE']).dt.date
 
         # timespan filter
         df = df[(df['DATE'] >= start_date) & (df['DATE'] <= end_date)]
 
-        fig = self.produce_fig(df, self.positivity_fig_kwargs)
+        # figure kwargs
+        positivity_fig_kwargs = {'x': 'DATE',
+                                 'y': 'PERCENT_POSITIVE'}
+
+        fig = self.produce_fig(df, positivity_fig_kwargs)
         return fig
-
-
-    def debugging(self, values):
-        return f'Here are your values: {values} of type {type(values)}'
 
 
 data_handler = DataHandler('wastewater_stats_interpolated.csv', 'wastewater_stats_prepared.csv',
@@ -136,21 +136,10 @@ app.layout = html.Div([
      Input('date_range', 'start_date')]
 )
 def update_wastewater_fig(dropdown, interp, end_date, start_date):
-    print(f'wastewater end date: {end_date}, start date: {start_date}')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
 
-    # try:
-    #     end_date = datetime.strptime(end_date, '%m/%d/%Y').replace(tzinfo=timezone.utc)
-    # except:
-    #     end_date = datetime.strptime(end_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-    #
-    # try:
-    #     start_date = datetime.strptime(start_date, '%m/%d/%Y').replace(tzinfo=timezone.utc)
-    # except:
-    #     pass
-    #     # start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-
-
-    fig = data_handler.update_fig(dropdown, interp, end_date, start_date)
+    fig = data_handler.update_wastewater_fig(dropdown, interp, end_date, start_date)
     return fig
 
 
@@ -160,21 +149,10 @@ def update_wastewater_fig(dropdown, interp, end_date, start_date):
      Input('date_range', 'start_date')]
 )
 def update_positivity_fig(end_date, start_date):
-    print(f'positivity end date: {end_date}, start date: {start_date}')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
 
-    ##TODO this is broken
-    try:
-        end_date = datetime.strptime(end_date, '%m/%d/%Y').replace(tzinfo=timezone.utc)
-    except:
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-
-    try:
-        start_date = datetime.strptime(start_date, '%m/%d/%Y').replace(tzinfo=timezone.utc)
-    except:
-        pass
-        # start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-
-    fig = data_handler.update_positivity(end_date, start_date)
+    fig = data_handler.update_positivity_fig(end_date, start_date)
     return fig
 
 
